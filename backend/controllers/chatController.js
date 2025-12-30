@@ -1,12 +1,12 @@
 const Message = require("../models/Message");
 
 exports.getMessages = async (req, res) => {
-  const msgs = await Message.find({
+  const messages = await Message.find({
     $or: [
       { sender: req.user.id, receiver: req.params.id },
-      { sender: req.params.id, receiver: req.user.id }
-    ]
-  }).sort({ createdAt: 1 });
+      { sender: req.params.id, receiver: req.user.id },
+    ],
+  }).sort("createdAt");
 
-  res.json(msgs);
+  res.json(messages);
 };

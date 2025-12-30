@@ -1,68 +1,62 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/authController');
-const postController = require('../controllers/postController');
-const { protect } = require('../middleware/authMiddleware');
+const authController = require("../controllers/authController");
+const postController = require("../controllers/postController");
+const { protect, restrictTo } = require("../controllers/authController");
 
-// Authentication Routes
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.get('/logout', authController.logout);
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/reset-password/:token', authController.resetPassword);
+// =========================
+// Public Auth Routes
+// =========================
+router.post("/auth/register", authController.register);
+router.post("/auth/login", authController.login);
+router.get("/auth/logout", authController.logout);
+router.post("/auth/forgot-password", authController.forgotPassword);
+router.post("/auth/reset-password/:token", authController.resetPassword);
 
-// Protected Routes (require authentication)
-router.use(protect);
+// =========================
+// Protected Routes
+// =========================
+router.use(authController.protect);
 
-// User Routes
-router.get('/me', authController.getMe);
-router.put('/update-me', authController.updateMe);
-router.delete('/delete-me', authController.deleteMe);
-router.put('/update-password', authController.updatePassword);
+// -------- User Routes --------
+router.get("/users/me", authController.getMe);
+router.put("/users/update-me", authController.updateMe);
+router.put("/users/update-password", authController.updatePassword);
+router.delete("/users/delete-me", authController.deleteMe);
 
-// Post Routes
-router.route('/posts')
-  .get(postController.getFeed)  // Get feed with pagination
-  .post(postController.createPost);  // Create new post
+// -------- Post Routes --------
+router.route("/posts")
+  .get(postController.getFeed)
+  .post(postController.createPost);
 
-router.route('/posts/:id')
-  .get(postController.getPost)  // Get single post
-  .put(postController.updatePost)  // Update post
-  .delete(postController.deletePost);  // Delete post
+router.route("/posts/:id")
+  .get(postController.getPost)
+  .put(postController.updatePost)
+  .delete(postController.deletePost);
 
-// Like/Unlike Post
-router.post('/posts/:id/like', postController.likePost);
+router.post("/posts/:id/like", postController.likePost);
 
-// Comments
-router.route('/posts/:id/comments')
-  .post(postController.addComment)  // Add comment
-  .get(postController.getComments);  // Get comments with pagination
+router.route("/posts/:id/comments")
+  .get(postController.getComments)
+  .post(postController.addComment);
 
-// Comment interactions
-router.delete('/comments/:id', postController.deleteComment);
-router.post('/comments/:id/like', postController.likeComment);
+router.delete("/comments/:id", postController.deleteComment);
+router.post("/comments/:id/like", postController.likeComment);
 
-// Saved Posts
-router.route('/saved-posts')
-  .get(postController.getSavedPosts)  // Get saved posts
-  .post(postController.savePost);  // Save/unsave post
+router.get("/posts/saved", postController.getSavedPosts);
+router.post("/posts/:id/save", postController.savePost);
 
-// User Posts
-router.get('/users/:userId/posts', postController.getUserPosts);
+router.get("/users/:userId/posts", postController.getUserPosts);
+router.get("/hashtags/:tag", postController.getPostsByHashtag);
+router.post("/posts/:id/report", postController.reportPost);
 
-// Hashtag Search
-router.get('/hashtags/:hashtag', postController.getPostsByHashtag);
+// =========================
+// Admin Routes
+// =========================
+router.use(authController.restrictTo("admin"));
+router.get("/admin/users", authController.getAllUsers);
 
-// Report Post
-router.post('/posts/:id/report', postController.reportPost);
-
-// Admin Routes (protected by admin role)
-router.use(authController.restrictTo('admin'));
-
-router.route('/admin/users')
-  .get(authController.getAllUsers);
-
-router.route('/admin/users/:id')
+router.route("/admin/users/:id")
   .get(authController.getUser)
   .put(authController.updateUser)
   .delete(authController.deleteUser);

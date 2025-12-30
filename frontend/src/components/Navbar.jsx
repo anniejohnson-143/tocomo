@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FiHome, FiUser, FiBell, FiMessageSquare, FiSearch, FiLogOut } from "react-icons/fi";
-import { FaToCoMoLogo } from "react-icons/fa";
 
 /* Top navigation bar */
 export default function Navbar() {
@@ -58,7 +57,7 @@ export default function Navbar() {
               >
                 <FiHome className="h-6 w-6" />
               </Link>
-              
+
               <Link
                 to="/notifications"
                 className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium relative"
@@ -67,7 +66,7 @@ export default function Navbar() {
                 <FiBell className="h-6 w-6" />
                 <span className="absolute top-1 right-1 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
               </Link>
-              
+
               <Link
                 to="/messages"
                 className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
@@ -75,7 +74,7 @@ export default function Navbar() {
               >
                 <FiMessageSquare className="h-6 w-6" />
               </Link>
-              
+
               <div className="relative ml-3">
                 <div>
                   <button
@@ -99,7 +98,7 @@ export default function Navbar() {
                     )}
                   </button>
                 </div>
-                
+
                 {/* Profile dropdown */}
                 <div
                   className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden"

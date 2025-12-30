@@ -1,183 +1,225 @@
 const Post = require("../models/Post");
 const Notification = require("../models/Notification");
-const { deleteFile } = require('../middleware/upload');
+const { deleteFile } = require("../middleware/upload");
 
-/* Create a post (text + optional media) */
-exports.createPost = async (req, res, next) => {
-  try {
-    const { content, media } = req.body;
-    let mediaArray = [];
+/* CREATE POST */
+exports.createPost = async (req, res) => {
+  const media = req.files?.map(file => ({
+    url: `/uploads/${file.filename}`,
+    filename: file.filename,
+    mediaType: file.mimetype.startsWith("image") ? "image" : "video"
+  })) || [];
 
-    // Handle media if provided in the request
-    if (req.files && req.files.length > 0) {
-      mediaArray = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
-        filename: file.filename,
-        mediaType: file.mimetype.startsWith('image/') ? 'image' : 'video'
-      }));
-    }
-    // Handle if media URLs are passed directly (e.g., from frontend)
-    else if (media && media.length > 0) {
-      mediaArray = Array.isArray(media) ? media : [media];
-    }
+  const hashtags = req.body.content.match(/#(\w+)/g)?.map(tag => tag.substring(1).toLowerCase()) || [];
 
-    const post = await Post.create({
-      user: req.user.id,
-      content,
-      media: mediaArray
-    });
+  const post = await Post.create({
+    user: req.user.id,
+    content: req.body.content,
+    hashtags,
+    media
+  });
 
-    // Populate user data
-    await post.populate('user', 'name username avatar');
-    
-    res.status(201).json({
-      success: true,
-      data: post
-    });
-  } catch (err) {
-    next(err);
-  }
+  await post.populate("user", "name username avatar");
+  res.status(201).json(post);
 };
 
-/* Like a post */
-exports.likePost = async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post.likes.includes(req.user.id)) {
-      post.likes.push(req.user.id);
-      await Notification.create({
-        receiver: post.user,
-        sender: req.user.id,
-        type: "like",
-        post: post._id
-      });
-    }
-    await post.save();
-    res.json(post);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-/* Get all posts for feed (populate user & comments) */
+/* GET FEED */
 exports.getFeed = async (req, res) => {
-  try {
-    const posts = await Post.find()
-      .populate("user", "name")
-      .populate("comments.user", "name")
-      .sort({ createdAt: -1 });
+  const posts = await Post.find()
+    .populate("user", "name username avatar")
+    .populate("comments.user", "name username avatar")
+    .sort("-createdAt");
 
-    res.json(posts);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  res.json(posts);
 };
 
-/* Add a comment */
+/* LIKE / UNLIKE POST */
+exports.likePost = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  const liked = post.likes.some(id => id.toString() === req.user.id);
+
+  if (liked) {
+    post.likes = post.likes.filter(id => id.toString() !== req.user.id);
+  } else {
+    post.likes.push(req.user.id);
+
+    await Notification.findOneAndUpdate(
+      { sender: req.user.id, receiver: post.user, post: post._id, type: "like" },
+      {},
+      { upsert: true }
+    );
+  }
+
+  await post.save();
+  res.json(post);
+};
+
+/* COMMENT */
 exports.addComment = async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    post.comments.push({
-      user: req.user.id,
-      text: req.body.text
-    });
-    await post.save();
-    res.json(post);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  post.comments.push({
+    user: req.user.id,
+    text: req.body.text
+  });
+
+  await post.save();
+  res.json(post);
 };
 
-/* Update a post */
-exports.updatePost = async (req, res, next) => {
-  try {
-    const { content, media } = req.body;
-    const post = await Post.findById(req.params.id);
-    
-    if (!post) {
-      return res.status(404).json({ success: false, message: 'Post not found' });
-    }
-
-    // Check if user is the owner of the post
-    if (post.user.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Not authorized to update this post' });
-    }
-
-    // Update content if provided
-    if (content) post.content = content;
-
-    // Handle media updates if provided
-    if (req.files && req.files.length > 0) {
-      // Delete old media files
-      if (post.media && post.media.length > 0) {
-        for (const media of post.media) {
-          await deleteFile(media.filename);
-        }
-      }
-
-      // Add new media
-      post.media = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
-        filename: file.filename,
-        mediaType: file.mimetype.startsWith('image/') ? 'image' : 'video'
-      }));
-    }
-    // If media is provided in the request body (e.g., from frontend)
-    else if (media !== undefined) {
-      // Delete old media files that are not in the new media array
-      const newMedia = Array.isArray(media) ? media : [media];
-      const mediaToKeep = new Set(newMedia.map(m => m.filename || m));
-      
-      if (post.media && post.media.length > 0) {
-        for (const mediaItem of post.media) {
-          if (!mediaToKeep.has(mediaItem.filename || mediaItem)) {
-            await deleteFile(mediaItem.filename);
-          }
-        }
-      }
-      
-      post.media = newMedia;
-    }
-
-    const updatedPost = await post.save();
-    await updatedPost.populate('user', 'name username avatar');
-    
-    res.json({
-      success: true,
-      data: updatedPost
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/* Delete a post */
+/* DELETE POST */
 exports.deletePost = async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found" });
 
-    if (post.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
+  if (post.user.toString() !== req.user.id)
+    return res.status(403).json({ message: "Unauthorized" });
 
-    await post.remove();
-    res.json({ message: "Post deleted" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  for (const media of post.media || []) {
+    await deleteFile(media.filename);
   }
+
+  await post.deleteOne();
+  res.json({ message: "Post deleted" });
 };
 
-/* Get posts by a specific user (Profile tab) */
-exports.getUserPosts = async (req, res) => {
-  try {
-    const posts = await Post.find({ user: req.params.id })
-      .populate("user", "name")
-      .populate("comments.user", "name")
-      .sort({ createdAt: -1 });
+/* SINGLE POST */
+exports.getPost = async (req, res) => {
+  const post = await Post.findById(req.params.id)
+    .populate("user", "name username avatar")
+    .populate("comments.user", "name username avatar");
 
-    res.json(posts);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  if (!post) return res.status(404).json({ message: "Post not found" });
+  res.json(post);
+};
+
+/* UPDATE POST */
+exports.updatePost = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  if (post.user.toString() !== req.user.id)
+    return res.status(403).json({ message: "Unauthorized" });
+
+  post.content = req.body.content;
+  post.hashtags = req.body.content.match(/#(\w+)/g)?.map(tag => tag.substring(1).toLowerCase()) || [];
+  
+  await post.save();
+  res.json(post);
+};
+
+/* SAVE / UNSAVE */
+exports.savePost = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  const saved = post.savedBy.some(
+    s => s.user.toString() === req.user.id
+  );
+
+  post.savedBy = saved
+    ? post.savedBy.filter(s => s.user.toString() !== req.user.id)
+    : [...post.savedBy, { user: req.user.id }];
+
+  await post.save();
+  res.json({ saved: !saved });
+};
+
+/* GET SAVED POSTS */
+exports.getSavedPosts = async (req, res) => {
+  const posts = await Post.find({ "savedBy.user": req.user.id })
+    .populate("user", "name username avatar")
+    .sort("-createdAt");
+  res.json(posts);
+};
+
+/* GET USER POSTS */
+exports.getUserPosts = async (req, res) => {
+  const posts = await Post.find({ user: req.params.userId })
+    .populate("user", "name username avatar")
+    .sort("-createdAt");
+  res.json(posts);
+};
+
+/* GET POSTS BY HASHTAG */
+exports.getPostsByHashtag = async (req, res) => {
+  const posts = await Post.find({ hashtags: req.params.tag.toLowerCase() })
+    .populate("user", "name username avatar")
+    .sort("-createdAt");
+  res.json(posts);
+};
+
+/* REPORT POST */
+exports.reportPost = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  const alreadyReported = post.reports.some(
+    report => report.user.toString() === req.user.id
+  );
+
+  if (alreadyReported) {
+    return res.status(400).json({ message: "You have already reported this post" });
   }
+
+  post.reports.push({
+    user: req.user.id,
+    reason: req.body.reason
+  });
+
+  await post.save();
+
+  res.json({ message: "Post reported successfully" });
+};
+
+/* GET COMMENTS */
+exports.getComments = async (req, res) => {
+  const post = await Post.findById(req.params.id).populate("comments.user", "name username avatar");
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  res.json(post.comments);
+};
+
+/* DELETE COMMENT */
+exports.deleteComment = async (req, res) => {
+  const post = await Post.findOne({ "comments._id": req.params.id });
+  if (!post) return res.status(404).json({ message: "Comment not found" });
+
+  const comment = post.comments.find(c => c._id.toString() === req.params.id);
+  if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+  // Allow post owner or comment owner to delete
+  if (comment.user.toString() !== req.user.id && post.user.toString() !== req.user.id) {
+    return res.status(403).json({ message: "You are not authorized to delete this comment" });
+  }
+
+  await Post.findByIdAndUpdate(post._id, {
+    $pull: { comments: { _id: req.params.id } }
+  });
+
+  res.json({ message: "Comment deleted successfully" });
+};
+
+/* LIKE COMMENT */
+exports.likeComment = async (req, res) => {
+  const post = await Post.findOne({ "comments._id": req.params.id });
+  if (!post) return res.status(404).json({ message: "Comment not found" });
+
+  const comment = post.comments.id(req.params.id);
+  if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+  const liked = comment.likes.some(like => like.toString() === req.user.id);
+
+  if (liked) {
+    comment.likes = comment.likes.filter(like => like.toString() !== req.user.id);
+  } else {
+    comment.likes.push(req.user.id);
+  }
+
+  await post.save();
+
+  res.json(comment);
 };

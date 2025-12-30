@@ -1,229 +1,183 @@
-require('dotenv').config({ path: './.env' });
-const express = require('express');
-const cors = require('cors');
-const http = require('http');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
-const hpp = require('hpp');
-const rateLimit = require('express-rate-limit');
-const compression = require('compression');
-const morgan = require('morgan');
-const fs = require('fs');
+require("dotenv").config();
+const express = require("express");
+const http = require("http");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
+const xss = require("xss-clean");
+const hpp = require("hpp");
+const rateLimit = require("express-rate-limit");
+const compression = require("compression");
+const morgan = require("morgan");
+const cors = require("cors");
 
-// Import config
-const config = require('./config/config');
+// Config & DB
+const config = require("./config/config");
+const connectDB = require("./config/db");
 
-// Import routes
-const apiRoutes = require('./routes/api');
-const uploadRoutes = require('./routes/uploadRoutes');
+// Routes
+const apiRoutes = require("./routes/api");
+const uploadRoutes = require("./routes/uploadRoutes");
 
-// Import error handling
-const AppError = require('./utils/appError');
-const globalErrorHandler = require('./middleware/errorHandler');
+// Errors
+const AppError = require("./utils/appError");
+const globalErrorHandler = require("./middleware/errorHandler");
 
-// Initialize express app
+// Socket Models
+const Message = require("./models/Message");
+const Notification = require("./models/Notification");
+
+// App
 const app = express();
 const server = http.createServer(app);
 
-// 1) GLOBAL MIDDLEWARES
+//
+// ======================
+// GLOBAL MIDDLEWARES (ORDER MATTERS)
+// ======================
+//
 
-// Set security HTTP headers
-app.use(helmet());
-
-// Development logging
-if (config.env === 'development') {
-  app.use(morgan('dev'));
-}
-
-// Limit requests from same API
-const limiter = rateLimit({
-  max: config.rateLimitMax,
-  windowMs: config.rateLimitWindowMs,
-  message: 'Too many requests from this IP, please try again in an hour!',
-});
-app.use('/api', limiter);
-
-// Body parser, reading data from body into req.body
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use(cookieParser());
-
-// Data sanitization against NoSQL query injection
-app.use(mongoSanitize());
-
-// Data sanitization against XSS
-app.use(xss());
-
-// Prevent parameter pollution
+// ✅ CORS — MUST BE FIRST
 app.use(
-  hpp({
-    whitelist: ['duration', 'ratingsQuantity', 'ratingsAverage', 'maxGroupSize', 'difficulty', 'price'],
+  cors({
+    origin: "http://localhost:5173", // Vite frontend
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Enable CORS
-app.use(cors({
-  origin: config.frontendUrl,
-  credentials: true
-}));
+// Security & parsing
+app.use(helmet());
+if (config.env === "development") app.use(morgan("dev"));
 
-// Compress all responses
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(cookieParser());
+
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
 app.use(compression());
 
-// Test middleware
-app.use((req, res, next) => {
-  req.requestTime = new Date().toISOString();
-  next();
-});
+// Optional rate limit
+app.use(
+  rateLimit({
+    max: 100,
+    windowMs: 15 * 60 * 1000,
+    message: "Too many requests, try again later",
+  })
+);
 
-// 2) ROUTES
-app.use('/api/v1', apiRoutes);
-app.use('/api/upload', uploadRoutes);
+//
+// ======================
+// ROUTES
+// ======================
+//
+app.use("/api/v1", apiRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
+// Production frontend
+if (config.env === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/build")));
+  app.get("*", (req, res) => {
+    res.sendFile(
+      path.resolve(__dirname, "../frontend/build/index.html")
+    );
   });
 }
 
-// 3) ERROR HANDLING
-// Handle unhandled routes
-app.all('*', (req, res, next) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+//
+// ======================
+// ERROR HANDLING
+// ======================
+//
+app.all("*", (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl}`, 404));
 });
-
-// Global error handling middleware
 app.use(globalErrorHandler);
 
-// 4) SOCKET.IO SETUP
-const { Server } = require('socket.io');
-const Message = require('./models/Message');
-const Notification = require('./models/Notification');
+//
+// ======================
+// SOCKET.IO
+// ======================
+//
+const { Server } = require("socket.io");
 
 const io = new Server(server, {
   cors: {
-    origin: config.frontendUrl,
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
+    origin: "http://localhost:5173",
+    credentials: true,
+  },
 });
 
 const onlineUsers = new Map();
 
-io.on('connection', (socket) => {
-  console.log('New client connected');
-  
-  // Handle user connection
-  socket.on('register', (userId) => {
-    onlineUsers.set(userId, socket.id);
-    console.log(`User ${userId} connected. Online users: ${onlineUsers.size}`);
+io.on("connection", (socket) => {
+  socket.on("register", (userId) => {
+    if (!onlineUsers.has(userId)) onlineUsers.set(userId, []);
+    onlineUsers.get(userId).push(socket.id);
   });
 
-  // Handle new message
-  socket.on('sendMessage', async (data) => {
+  socket.on("sendMessage", async (data) => {
     try {
-      const message = await Message.create({
-        sender: data.sender,
-        receiver: data.receiver,
-        content: data.content,
-        chatRoom: data.chatRoom
-      });
+      const message = await Message.create(data);
+      await message.populate("sender", "username profilePicture.url");
 
-      // Populate sender details
-      await message.populate('sender', 'name avatar');
-      
-      // Emit to the specific recipient if online
-      const recipientSocketId = onlineUsers.get(data.receiver);
-      if (recipientSocketId) {
-        io.to(recipientSocketId).emit('receiveMessage', message);
-      }
-      
-      // Also emit back to sender
-      socket.emit('messageSent', message);
-      
-      // Create notification for the recipient
+      const receiverSockets = onlineUsers.get(data.receiver) || [];
+      receiverSockets.forEach((id) =>
+        io.to(id).emit("receiveMessage", message)
+      );
+
       await Notification.create({
-        user: data.receiver,
+        recipient: data.receiver,
         sender: data.sender,
-        type: 'message',
-        content: `New message from ${message.sender.name}`,
-        referenceId: message._id,
-        referenceType: 'Message'
+        type: "message",
+        content: `New message from ${message.sender.username}`,
+        reference: { id: message._id, type: "Message" },
       });
-      
-    } catch (error) {
-      console.error('Error sending message:', error);
-      socket.emit('error', { message: 'Failed to send message' });
+    } catch (err) {
+      console.error("Socket error:", err);
     }
   });
 
-  // Handle typing indicator
-  socket.on('typing', (data) => {
-    const recipientSocketId = onlineUsers.get(data.receiver);
-    if (recipientSocketId) {
-      io.to(recipientSocketId).emit('userTyping', {
-        sender: data.sender,
-        isTyping: data.isTyping
-      });
-    }
-  });
-
-  // Handle user disconnection
-  socket.on('disconnect', () => {
-    // Remove user from online users
-    for (const [userId, socketId] of onlineUsers.entries()) {
-      if (socketId === socket.id) {
-        onlineUsers.delete(userId);
-        console.log(`User ${userId} disconnected. Online users: ${onlineUsers.size}`);
-        break;
-      }
+  socket.on("disconnect", () => {
+    for (const [userId, sockets] of onlineUsers.entries()) {
+      const remaining = sockets.filter((id) => id !== socket.id);
+      if (remaining.length === 0) onlineUsers.delete(userId);
+      else onlineUsers.set(userId, remaining);
     }
   });
 });
 
-// 5) START SERVER
+//
+// ======================
+// START SERVER
+// ======================
+//
 const port = config.port || 5000;
 
-// Connect to the database before starting the server
-const connectDB = require('./config/db');
-
-const startServer = async () => {
+(async () => {
   try {
     await connectDB();
-    
     server.listen(port, () => {
-      console.log(`Server running in ${config.env} mode on port ${port}`.yellow.bold);
+      console.log(
+        `🚀 Server running on port ${port} in ${config.env} mode`
+      );
     });
-    
-    // Handle unhandled promise rejections
-    process.on('unhandledRejection', (err) => {
-      console.log('UNHANDLED REJECTION! 💥 Shutting down...');
-      console.log(err.name, err.message);
-      server.close(() => {
-        process.exit(1);
-      });
-    });
-    
-    process.on('SIGTERM', () => {
-      console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
-      server.close(() => {
-        console.log('💥 Process terminated!');
-      });
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
+  } catch (err) {
+    console.error("❌ DB connection error:", err);
     process.exit(1);
   }
-};
 
-// Start the server
-startServer();
+  process.on("unhandledRejection", (err) => {
+    console.error("UNHANDLED REJECTION:", err);
+    server.close(() => process.exit(1));
+  });
+
+  process.on("SIGTERM", () => {
+    server.close(() => process.exit(0));
+  });
+})();

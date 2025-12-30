@@ -1,62 +1,44 @@
 const mongoose = require('mongoose');
-const config = require('./config');
 const colors = require('colors');
+const config = require('./config');
 
-// Remove mongoose's deprecated warning
+// Remove deprecated warning
 mongoose.set('strictQuery', true);
 
-// Exit application on error
+// Exit application on MongoDB error
 mongoose.connection.on('error', (err) => {
   console.error(`MongoDB connection error: ${err}`.red);
-  process.exit(-1);
+  process.exit(1);
 });
 
-// Print mongoose logs in development env
+// Show mongoose logs in development
 if (config.env === 'development') {
   mongoose.set('debug', true);
 }
 
-/**
- * Connect to MongoDB
- * @returns {Promise<mongoose.Connection>} Mongoose connection
- */
 const connectDB = async () => {
   try {
-    const connection = await mongoose.connect(config.mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 10, // Maximum number of connections in the connection pool
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      family: 4, // Use IPv4, skip trying IPv6
+    const conn = await mongoose.connect(config.mongoUri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4,
     });
 
-    console.log(`MongoDB Connected: ${connection.connection.host}`.cyan.underline.bold);
-    
-    // Handle connection events
-    connection.connection.on('connected', () => {
-      console.log('Mongoose connected to DB'.green);
-    });
+    console.log(
+      `MongoDB Connected: ${conn.connection.host}`.cyan.bold
+    );
 
-    connection.connection.on('error', (err) => {
-      console.error('Mongoose connection error:'.red, err);
-    });
-
-    connection.connection.on('disconnected', () => {
-      console.log('Mongoose connection disconnected'.yellow);
-    });
-
-    // Close the Mongoose connection when the Node process ends
+    // Graceful shutdown
     process.on('SIGINT', async () => {
-      await connection.connection.close();
-      console.log('Mongoose default connection disconnected through app termination'.yellow);
+      await mongoose.connection.close();
+      console.log(
+        'MongoDB disconnected due to app termination'.yellow
+      );
       process.exit(0);
     });
-
-    return connection;
   } catch (error) {
-    console.error(`Error: ${error.message}`.red);
-    // Close server & exit process with failure
+    console.error(`MongoDB Error: ${error.message}`.red);
     process.exit(1);
   }
 };

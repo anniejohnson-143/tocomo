@@ -1,14 +1,13 @@
 import axios from "axios";
 
-/* Axios instance for backend API */
 const API = axios.create({
-  baseURL: "http://localhost:5000/api"
+  baseURL: "http://localhost:5000/api/v1",
+  withCredentials: true,
 });
 
-/* Automatically attach token for protected routes */
-API.interceptors.request.use(req => {
+API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
-  if (token) req.headers.Authorization = token;
+  if (token) req.headers.Authorization = `Bearer ${token}`;
   return req;
 });
 

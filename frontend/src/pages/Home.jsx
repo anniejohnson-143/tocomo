@@ -31,6 +31,16 @@ const Home = () => {
     fetchData();
   }, []);
 
+  // Fetch posts function (used to reload posts)
+  const fetchPosts = async () => {
+    try {
+      const res = await API.get("/posts");
+      setPosts(res.data);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    }
+  };
+
   // Handle image selection
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -68,15 +78,15 @@ const Home = () => {
   const toggleLike = async (postId) => {
     try {
       await API.post(`/posts/like/${postId}`);
-      setPosts(posts.map(post => 
-        post._id === postId 
-          ? { 
-              ...post, 
-              likes: post.isLiked 
-                ? post.likes.filter(like => like.user !== user._id)
-                : [...post.likes, { user: user._id }],
-              isLiked: !post.isLiked 
-            } 
+      setPosts(posts.map(post =>
+        post._id === postId
+          ? {
+            ...post,
+            likes: post.isLiked
+              ? post.likes.filter(like => like.user !== user._id)
+              : [...post.likes, { user: user._id }],
+            isLiked: !post.isLiked
+          }
           : post
       ));
     } catch (error) {
@@ -134,12 +144,12 @@ const Home = () => {
               className="w-full border-0 focus:ring-0 resize-none text-gray-900 placeholder-gray-500 text-sm sm:text-base"
               rows="3"
             />
-            
+
             {imagePreview && (
               <div className="mt-2 relative rounded-lg overflow-hidden">
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
+                <img
+                  src={imagePreview}
+                  alt="Preview"
                   className="w-full h-48 object-cover rounded-lg"
                 />
                 <button
@@ -175,9 +185,8 @@ const Home = () => {
               <button
                 type="submit"
                 disabled={!content.trim() && !image}
-                className={`px-4 py-2 rounded-full text-sm font-medium text-white ${
-                  !content.trim() && !image ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
-                }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium text-white ${!content.trim() && !image ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
               >
                 Post
               </button>
@@ -218,7 +227,7 @@ const Home = () => {
                     <FiMoreHorizontal className="h-5 w-5" />
                   </button>
                 </div>
-                
+
                 {/* Post Content */}
                 <div className="mt-3 text-gray-800">
                   <p>{post.content}</p>
@@ -227,9 +236,9 @@ const Home = () => {
                 {/* Post Image */}
                 {post.image && (
                   <div className="mt-3 rounded-lg overflow-hidden">
-                    <img 
-                      src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${post.image}`} 
-                      alt="Post" 
+                    <img
+                      src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${post.image}`}
+                      alt="Post"
                       className="w-full h-auto max-h-96 object-cover rounded-lg"
                     />
                   </div>
@@ -237,14 +246,14 @@ const Home = () => {
 
                 {/* Post Actions */}
                 <div className="mt-3 flex items-center justify-between text-gray-500">
-                  <button 
+                  <button
                     onClick={() => toggleLike(post._id)}
                     className={`flex items-center space-x-1 ${post.isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
                   >
                     <FiHeart className="h-5 w-5" />
                     <span>{post.likes?.length || 0}</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setActiveCommentBox(activeCommentBox === post._id ? null : post._id)}
                     className="flex items-center space-x-1 hover:text-indigo-600"
                   >
@@ -266,7 +275,7 @@ const Home = () => {
                       <input
                         type="text"
                         value={commentInputs[post._id] || ''}
-                        onChange={(e) => 
+                        onChange={(e) =>
                           setCommentInputs(prev => ({
                             ...prev,
                             [post._id]: e.target.value
@@ -276,7 +285,7 @@ const Home = () => {
                         className="flex-1 border-0 border-b border-gray-200 focus:border-indigo-500 focus:ring-0 px-0 py-1 text-sm"
                         onKeyPress={(e) => e.key === 'Enter' && addComment(post._id)}
                       />
-                      <button 
+                      <button
                         onClick={() => addComment(post._id)}
                         className="ml-2 text-indigo-600 font-medium text-sm"
                       >
