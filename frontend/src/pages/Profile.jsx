@@ -72,15 +72,15 @@ export default function Profile() {
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 mt-16">
       {/* Profile Header */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 mb-6">
         <div className="flex items-center space-x-4">
-          <div className="h-20 w-20 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-2xl">
+          <div className="h-20 w-20 rounded-full bg-peach-light flex items-center justify-center text-peach-dark font-bold text-3xl shadow-inner">
             {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
-            <p className="text-gray-500">{user.email}</p>
-            <p className="text-sm text-gray-400 mt-1">{posts.length} {posts.length === 1 ? 'post' : 'posts'}</p>
+            <h1 className="text-2xl font-bold text-charcoal">{user.name}</h1>
+            <p className="text-stone-500">{user.email}</p>
+            <p className="text-sm text-stone-400 mt-1">{posts.length} {posts.length === 1 ? 'post' : 'posts'}</p>
           </div>
         </div>
       </div>
@@ -89,13 +89,13 @@ export default function Profile() {
       <h2 className="text-xl font-semibold text-gray-900 mb-4">My Posts</h2>
 
       {posts.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-8 text-center">
           <p className="text-gray-500">You haven't posted anything yet.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {posts.map(post => (
-            <div className="bg-white rounded-lg shadow p-4" key={post._id}>
+            <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4 transition-shadow hover:shadow-md" key={post._id}>
               <p className="text-gray-800 mb-3">{post.content}</p>
 
               {post.image && (
@@ -109,14 +109,14 @@ export default function Profile() {
               <div className="flex items-center space-x-2 mt-4 pt-3 border-t border-gray-200">
                 <button
                   onClick={() => editPost(post._id, post.content)}
-                  className="flex items-center space-x-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
+                  className="flex items-center space-x-1 px-4 py-2 bg-peach text-white rounded-full hover:bg-peach-dark transition-all transform active:scale-95 text-sm font-bold shadow-sm"
                 >
                   <FiEdit2 className="h-4 w-4" />
                   <span>Edit</span>
                 </button>
                 <button
                   onClick={() => deletePost(post._id)}
-                  className="flex items-center space-x-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+                  className="flex items-center space-x-1 px-4 py-2 bg-red-400 text-white rounded-full hover:bg-red-500 transition-all transform active:scale-95 text-sm font-bold shadow-sm"
                 >
                   <FiTrash2 className="h-4 w-4" />
                   <span>Delete</span>

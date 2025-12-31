@@ -4,11 +4,20 @@ const { deleteFile } = require("../middleware/upload");
 
 /* CREATE POST */
 exports.createPost = async (req, res) => {
-  const media = req.files?.map(file => ({
-    url: `/uploads/${file.filename}`,
-    filename: file.filename,
-    mediaType: file.mimetype.startsWith("image") ? "image" : "video"
-  })) || [];
+  let media = [];
+  if (req.file) {
+    media = [{
+      url: `/uploads/${req.file.filename}`,
+      filename: req.file.filename,
+      mediaType: req.file.mimetype.startsWith("image") ? "image" : "video"
+    }];
+  } else if (req.files && req.files.length > 0) {
+    media = req.files.map(file => ({
+      url: `/uploads/${file.filename}`,
+      filename: file.filename,
+      mediaType: file.mimetype.startsWith("image") ? "image" : "video"
+    }));
+  }
 
   const hashtags = req.body.content.match(/#(\w+)/g)?.map(tag => tag.substring(1).toLowerCase()) || [];
 
@@ -106,7 +115,7 @@ exports.updatePost = async (req, res) => {
 
   post.content = req.body.content;
   post.hashtags = req.body.content.match(/#(\w+)/g)?.map(tag => tag.substring(1).toLowerCase()) || [];
-  
+
   await post.save();
   res.json(post);
 };

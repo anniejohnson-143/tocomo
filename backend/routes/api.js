@@ -4,14 +4,19 @@ const authController = require("../controllers/authController");
 const postController = require("../controllers/postController");
 const { protect, restrictTo } = require("../controllers/authController");
 
+const { upload } = require("../middleware/upload");
+
 // =========================
 // Public Auth Routes
 // =========================
-router.post("/auth/register", authController.register);
+router.post("/auth/register", upload.single("profilePicture"), authController.register);
 router.post("/auth/login", authController.login);
 router.get("/auth/logout", authController.logout);
 router.post("/auth/forgot-password", authController.forgotPassword);
 router.post("/auth/reset-password/:token", authController.resetPassword);
+
+// Verify Token (Protected)
+router.get("/auth/verify", authController.protect, authController.verify);
 
 // =========================
 // Protected Routes
@@ -25,9 +30,10 @@ router.put("/users/update-password", authController.updatePassword);
 router.delete("/users/delete-me", authController.deleteMe);
 
 // -------- Post Routes --------
+// -------- Post Routes --------
 router.route("/posts")
   .get(postController.getFeed)
-  .post(postController.createPost);
+  .post(upload.single("image"), postController.createPost);
 
 router.route("/posts/:id")
   .get(postController.getPost)

@@ -30,7 +30,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-cream flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="h-12 w-12 rounded-full bg-indigo-600 flex items-center justify-center text-white">
@@ -42,7 +42,7 @@ export default function Login() {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Or{' '}
-          <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+          <Link to="/register" className="font-medium text-peach-dark hover:text-peach-dark/80 transition-colors">
             create a new account
           </Link>
         </p>
@@ -82,7 +82,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md h-10"
+                  className="focus:ring-peach focus:border-peach block w-full pl-10 sm:text-sm border-stone-200 rounded-md h-10 transition-shadow"
                   placeholder="you@example.com"
                 />
               </div>
@@ -104,7 +104,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md h-10"
+                  className="focus:ring-peach focus:border-peach block w-full pl-10 sm:text-sm border-stone-200 rounded-md h-10 transition-shadow"
                   placeholder="••••••••"
                 />
               </div>
@@ -116,7 +116,7 @@ export default function Login() {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-peach focus:ring-peach border-stone-300 rounded transition-colors"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                   Remember me
@@ -124,7 +124,7 @@ export default function Login() {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
+                <a href="#" className="font-medium text-peach-dark hover:text-peach-dark/80 transition-colors">
                   Forgot your password?
                 </a>
               </div>
@@ -134,7 +134,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 h-10 items-center ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-full shadow-lg text-sm font-medium text-white bg-peach hover:bg-peach-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-peach h-10 items-center transition-all active:scale-95 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   'Signing in...'

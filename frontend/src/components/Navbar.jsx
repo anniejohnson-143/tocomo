@@ -1,12 +1,26 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FiHome, FiUser, FiBell, FiMessageSquare, FiSearch, FiLogOut } from "react-icons/fi";
+import API from "../services/api";
 
 /* Top navigation bar */
 export default function Navbar() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user")) || {};
+  let user = {};
+  try {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser && storedUser !== "undefined") {
+      user = JSON.parse(storedUser);
+    }
+  } catch (e) {
+    console.error("Failed to parse user from local storage", e);
+  }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await API.get("/auth/logout");
+    } catch (e) {
+      console.warn("Logout failed on backend", e);
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     window.dispatchEvent(new Event('storage'));
@@ -14,16 +28,16 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-sm fixed w-full z-10">
+    <nav className="bg-cream/90 backdrop-blur-md border-b border-stone-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link to="/home" className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
-                <span className="transform rotate-45 text-xl">↗</span>
+              <div className="h-8 w-8 rounded-xl bg-peach flex items-center justify-center text-white shadow-sm transform transition-transform hover:scale-110">
+                <span className="text-xl font-bold">T</span>
               </div>
-              <span className="ml-2 text-xl font-bold text-gray-900 hidden sm:inline">ToCoMo</span>
+              <span className="ml-2 text-xl font-bold text-charcoal hidden sm:inline tracking-tight">ToCoMo</span>
             </Link>
           </div>
 
@@ -38,8 +52,8 @@ export default function Navbar() {
                 <input
                   id="search"
                   name="search"
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Search"
+                  className="block w-full pl-10 pr-3 py-2 border border-stone-200 rounded-full leading-5 bg-white/50 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-peach focus:border-peach sm:text-sm transition-all duration-200"
+                  placeholder="Search..."
                   type="search"
                 />
               </div>
@@ -52,7 +66,7 @@ export default function Navbar() {
             <div className="flex-shrink-0 flex items-center space-x-4">
               <Link
                 to="/home"
-                className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-stone-500 hover:text-peach transition-colors px-3 py-2 rounded-full hover:bg-peach/10"
                 title="Home"
               >
                 <FiHome className="h-6 w-6" />
@@ -60,16 +74,16 @@ export default function Navbar() {
 
               <Link
                 to="/notifications"
-                className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium relative"
+                className="text-stone-500 hover:text-peach transition-colors px-3 py-2 rounded-full hover:bg-peach/10 relative"
                 title="Notifications"
               >
                 <FiBell className="h-6 w-6" />
-                <span className="absolute top-1 right-1 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="absolute top-2 right-2 inline-block w-2.5 h-2.5 bg-peach-dark rounded-full border-2 border-white"></span>
               </Link>
 
               <Link
                 to="/messages"
-                className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-stone-500 hover:text-peach transition-colors px-3 py-2 rounded-full hover:bg-peach/10"
                 title="Messages"
               >
                 <FiMessageSquare className="h-6 w-6" />
@@ -79,7 +93,7 @@ export default function Navbar() {
                 <div>
                   <button
                     type="button"
-                    className="bg-gray-800 flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+                    className="bg-transparent flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-peach transition-shadow"
                     id="user-menu"
                     aria-expanded="false"
                     aria-haspopup="true"
@@ -92,7 +106,7 @@ export default function Navbar() {
                         alt={user.name}
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
+                      <div className="h-8 w-8 rounded-full bg-peach-light text-peach-dark border border-peach/20 flex items-center justify-center font-bold">
                         {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                     )}

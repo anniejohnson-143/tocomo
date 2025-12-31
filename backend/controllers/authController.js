@@ -44,24 +44,27 @@ const register = async (req, res) => {
     if (exists)
       return res.status(400).json({ message: "Email already exists" });
 
+    if (req.file) {
+      req.body.profilePicture = {
+        url: `/uploads/${req.file.filename}`, // Assuming local storage
+        publicId: req.file.filename
+      };
+    }
+
     const user = await User.create(req.body);
 
     // Optional email verification token
-    if (typeof user.createEmailVerificationToken === "function") {
-      const token = user.createEmailVerificationToken();
-      await user.save({ validateBeforeSave: false });
-
-      const url = `${req.protocol}://${req.get(
-        "host"
-      )}/api/auth/verify-email/${token}`;
-
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
-        to: user.email,
-        subject: "Verify Email",
-        text: `Verify here: ${url}`,
-      });
+    // Optional email verification token
+    // Email verification disabled per user request
+    /*
+    if (
+      process.env.EMAIL_USERNAME &&
+      process.env.EMAIL_PASSWORD &&
+      typeof user.createEmailVerificationToken === "function"
+    ) {
+      // ... verification logic ...
     }
+    */
 
     res.status(201).json({
       status: "success",
@@ -80,8 +83,8 @@ const login = async (req, res) => {
   if (!user || !(await user.correctPassword(password, user.password)))
     return res.status(401).json({ message: "Invalid credentials" });
 
-  if (!user.active)
-    return res.status(401).json({ message: "Verify email first" });
+  // if (!user.active)
+  //   return res.status(401).json({ message: "Verify email first" });
 
   createSendToken(user, 200, res);
 };
@@ -179,6 +182,11 @@ const resetPassword = async (req, res) => {
   });
 };
 
+// ================= VERIFY TOKEN =================
+const verify = async (req, res) => {
+  res.status(200).json({ status: "success", user: req.user });
+};
+
 // ================= ADMIN USER ROUTES =================
 const getAllUsers = async (req, res) => {
   const users = await User.find();
@@ -220,4 +228,5 @@ module.exports = {
   getUser,
   updateUser,
   deleteUser,
+  verify
 };

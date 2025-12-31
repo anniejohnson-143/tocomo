@@ -5,7 +5,8 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
-const xss = require("xss-clean");
+// const xss = require("xss-clean");
+// // app.use(xss());
 const hpp = require("hpp");
 const rateLimit = require("express-rate-limit");
 const compression = require("compression");
@@ -19,6 +20,7 @@ const connectDB = require("./config/db");
 // Routes
 const apiRoutes = require("./routes/api");
 const uploadRoutes = require("./routes/uploadRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // Errors
 const AppError = require("./utils/appError");
@@ -56,8 +58,8 @@ app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
-app.use(mongoSanitize());
-app.use(xss());
+// app.use(mongoSanitize());
+// app.use(xss());
 app.use(hpp());
 app.use(compression());
 
@@ -77,6 +79,7 @@ app.use(
 //
 app.use("/api/v1", apiRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Production frontend
@@ -94,7 +97,7 @@ if (config.env === "production") {
 // ERROR HANDLING
 // ======================
 //
-app.all("*", (req, res, next) => {
+app.all(/.*/, (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl}`, 404));
 });
 app.use(globalErrorHandler);

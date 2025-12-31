@@ -129,10 +129,10 @@ const Home = () => {
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
       {/* Create Post */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4 mb-6 transition-shadow hover:shadow-md">
         <div className="flex items-start space-x-3">
           <Link to={`/profile/${user._id}`} className="flex-shrink-0">
-            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
+            <div className="h-10 w-10 rounded-full bg-peach-light flex items-center justify-center text-peach-dark font-bold text-lg">
               {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
           </Link>
@@ -170,7 +170,7 @@ const Home = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current.click()}
-                  className="text-gray-500 hover:text-indigo-600"
+                  className="text-stone-400 hover:text-peach transition-colors"
                 >
                   <FiImage className="h-5 w-5" />
                 </button>
@@ -185,7 +185,7 @@ const Home = () => {
               <button
                 type="submit"
                 disabled={!content.trim() && !image}
-                className={`px-4 py-2 rounded-full text-sm font-medium text-white ${!content.trim() && !image ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                className={`px-6 py-2 rounded-full text-sm font-bold text-white transition-all transform active:scale-95 ${!content.trim() && !image ? 'bg-peach/50 cursor-not-allowed' : 'bg-peach hover:bg-peach-dark shadow-sm hover:shadow-md'
                   }`}
               >
                 Post
@@ -204,18 +204,18 @@ const Home = () => {
       ) : (
         <div className="space-y-6">
           {posts.map((post) => (
-            <div key={post._id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div key={post._id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden hover:shadow-md transition-shadow">
               {/* Post Header */}
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Link to={`/profile/${post.user._id}`} className="flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
+                      <div className="h-10 w-10 rounded-full bg-peach-light flex items-center justify-center text-peach-dark font-bold">
                         {post.user.name ? post.user.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                     </Link>
                     <div>
-                      <Link to={`/profile/${post.user._id}`} className="font-medium text-gray-900">
+                      <Link to={`/profile/${post.user._id}`} className="font-bold text-charcoal hover:text-peach-dark transition-colors">
                         {post.user.name}
                       </Link>
                       <p className="text-xs text-gray-500">
@@ -255,7 +255,7 @@ const Home = () => {
                   </button>
                   <button
                     onClick={() => setActiveCommentBox(activeCommentBox === post._id ? null : post._id)}
-                    className="flex items-center space-x-1 hover:text-indigo-600"
+                    className="flex items-center space-x-1 hover:text-peach transition-colors"
                   >
                     <FiMessageSquare className="h-5 w-5" />
                     <span>{post.comments?.length || 0}</span>
@@ -282,12 +282,12 @@ const Home = () => {
                           }))
                         }
                         placeholder="Write a comment..."
-                        className="flex-1 border-0 border-b border-gray-200 focus:border-indigo-500 focus:ring-0 px-0 py-1 text-sm"
+                        className="flex-1 border-0 border-b border-stone-200 focus:border-peach focus:ring-0 px-0 py-1 text-sm bg-transparent"
                         onKeyPress={(e) => e.key === 'Enter' && addComment(post._id)}
                       />
                       <button
                         onClick={() => addComment(post._id)}
-                        className="ml-2 text-indigo-600 font-medium text-sm"
+                        className="ml-2 text-peach-dark font-bold text-sm hover:text-peach"
                       >
                         Post
                       </button>
@@ -300,11 +300,11 @@ const Home = () => {
                       {post.comments.map((comment) => (
                         <div key={comment._id} className="flex items-start space-x-2">
                           <Link to={`/profile/${comment.user._id}`} className="flex-shrink-0">
-                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs text-indigo-600 font-medium">
+                            <div className="h-8 w-8 rounded-full bg-peach-light flex items-center justify-center text-xs text-peach-dark font-bold">
                               {comment.user.name ? comment.user.name.charAt(0).toUpperCase() : 'U'}
                             </div>
                           </Link>
-                          <div className="bg-gray-50 rounded-lg px-3 py-2 flex-1">
+                          <div className="bg-stone-50 rounded-2xl px-4 py-2 flex-1">
                             <div className="flex items-center">
                               <Link to={`/profile/${comment.user._id}`} className="font-medium text-sm">
                                 {comment.user.name}

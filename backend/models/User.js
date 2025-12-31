@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema(
     blockedUsers: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: "User" } }],
 
     // Security
-    emailVerified: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: true },
     emailVerificationToken: String,
     emailVerificationExpires: Date,
     passwordResetToken: String,
@@ -63,15 +63,15 @@ userSchema.index({ "followers.user": 1 });
 userSchema.index({ "following.user": 1 });
 
 // Hash password
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+// Hash password
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 // Methods
-userSchema.methods.comparePassword = function (password) {
-  return bcrypt.compare(password, this.password);
+userSchema.methods.correctPassword = function (password, userPassword) {
+  return bcrypt.compare(password, userPassword);
 };
 
 userSchema.methods.createPasswordResetToken = function () {
